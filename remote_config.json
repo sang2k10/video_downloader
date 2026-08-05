@@ -1,0 +1,22 @@
+{
+  "scraperConfig": {
+    "tiktokApiEndpoints": [
+      "https://www.tikwm.com/api/",
+      "https://snaptik.vn/api/tiktok",
+      "https://d.zcdn.top/api/tiktok"
+    ],
+    "facebookApiEndpoints": [
+      "https://fsave.net/proxy.php",
+      "https://snapsave.app/action.php"
+    ],
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "timeoutSeconds": 15
+  },
+  "updateInfo": {
+    "latestVersionCode": 1,
+    "latestVersionName": "1.0.0",
+    "apkUrl": "https://github.com/your-username/video_downloader/releases/download/v1.0.0/app-debug.apk",
+    "releaseNotes": "Bản phát hành đầu tiên: Tải video TikTok không logo, Facebook HD/SD và nhạc MP3.",
+    "forceUpdate": false
+  }
+}
