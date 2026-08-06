@@ -120,6 +120,16 @@ fun MainScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
+            // Note Text banner requested by user
+            Text(
+                text = "Note: Pop-up mode from Quick Tile may vary in landscape orientation.",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            )
+
             // Minimal Input Field
             OutlinedTextField(
                 value = inputUrl,
