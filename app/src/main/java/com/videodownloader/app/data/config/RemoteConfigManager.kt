@@ -36,7 +36,7 @@ data class RemoteConfigResponse(
 
 object RemoteConfigManager {
     // Remote JSON endpoint hosted on GitHub Raw / Gist / Vercel
-    private const val DEFAULT_REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/videodownloader/config/main/remote_config.json"
+    private const val DEFAULT_REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/sang2k10/video_downloader/refs/heads/main/remote_config.json"
     
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
