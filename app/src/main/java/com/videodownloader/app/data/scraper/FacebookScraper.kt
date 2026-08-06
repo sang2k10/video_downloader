@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.net.URLDecoder
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 import kotlin.math.roundToInt
@@ -20,16 +21,23 @@ object FacebookScraper {
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .followRedirects(true)
+        .followSslRedirects(true)
         .build()
 
     suspend fun parseFacebookUrl(url: String): Result<VideoInfo> = withContext(Dispatchers.IO) {
         try {
             val cleanUrl = extractUrl(url)
             if (cleanUrl.isEmpty()) {
-                return@withContext Result.failure(IllegalArgumentException("URL Facebook không hợp lệ"))
+                return@withContext Result.failure(IllegalArgumentException("Invalid Facebook URL"))
             }
 
-            // 1. Try Remote Config proxy endpoints (FSave / SnapSave)
+            // 1. Direct HTML & Regex Extraction (Fastest & Most Reliable)
+            val directInfo = fetchDirectFacebookHtml(cleanUrl)
+            if (directInfo != null && directInfo.options.isNotEmpty()) {
+                return@withContext Result.success(directInfo)
+            }
+
+            // 2. Try Remote Config proxy endpoints (FSave / SnapSave)
             val config = RemoteConfigManager.getConfig().scraperConfig
             val endpoints = config.facebookApiEndpoints.ifEmpty {
                 listOf("https://fsave.net/proxy.php")
@@ -42,13 +50,7 @@ object FacebookScraper {
                 }
             }
 
-            // 2. Direct Mobile Facebook HTML Parsing Engine Fallback
-            val directInfo = fetchDirectFacebookHtml(cleanUrl)
-            if (directInfo != null && directInfo.options.isNotEmpty()) {
-                return@withContext Result.success(directInfo)
-            }
-
-            Result.failure(Exception("Không thể giải mã video Facebook. Vui lòng kiểm tra lại link!"))
+            Result.failure(Exception("Unable to fetch Facebook video. Please check the URL."))
         } catch (e: Exception) {
             e.printStackTrace()
             Result.failure(e)
@@ -59,6 +61,87 @@ object FacebookScraper {
         val regex = Regex("""https?://[^\s"'<]+""")
         val match = regex.find(input)
         return match?.value ?: ""
+    }
+
+    private fun fetchDirectFacebookHtml(targetUrl: String): VideoInfo? {
+        try {
+            val requestUrl = targetUrl.replace("web.facebook.com", "www.facebook.com")
+            val req = Request.Builder()
+                .url(requestUrl)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .build()
+
+            client.newCall(req).execute().use { response ->
+                if (!response.isSuccessful || response.body == null) return null
+                val rawHtml = response.body!!.string()
+
+                // Clean & unescape HTML string
+                val unescaped = unescapeHtmlAndJson(rawHtml)
+
+                val hdMatches = findRegexMatches(unescaped, """["']?(?:playable_url_quality_hd|hd_src|browser_native_hd_url)["']?\s*:\s*["']([^"']+)["']""")
+                val sdMatches = findRegexMatches(unescaped, """["']?(?:playable_url|sd_src|browser_native_sd_url)["']?\s*:\s*["']([^"']+)["']""")
+
+                val titleMatches = findRegexMatches(unescaped, """<title[^>]*>(.*?)</title>""")
+                val rawTitle = titleMatches.firstOrNull()?.replace(" | Facebook", "")?.trim() ?: "Facebook Video"
+
+                val options = mutableListOf<DownloadOption>()
+
+                // High Quality Option (HD)
+                val hdUrl = hdMatches.firstOrNull()
+                if (!hdUrl.isNullOrEmpty()) {
+                    val realHdUrl = cleanVideoUrl(hdUrl)
+                    val size = fetchContentLength(realHdUrl)
+                    options.add(
+                        DownloadOption(
+                            label = "High Quality (HD)",
+                            url = realHdUrl,
+                            quality = "HD (1080p/720p)",
+                            sizeBytes = size,
+                            formattedSize = formatSize(size),
+                            isNoWatermark = false,
+                            isAudioOnly = false,
+                            fileExtension = "mp4"
+                        )
+                    )
+                }
+
+                // Low Quality Option (SD)
+                val sdUrl = sdMatches.firstOrNull()
+                if (!sdUrl.isNullOrEmpty()) {
+                    val realSdUrl = cleanVideoUrl(sdUrl)
+                    val size = fetchContentLength(realSdUrl)
+                    options.add(
+                        DownloadOption(
+                            label = "Low Quality (SD)",
+                            url = realSdUrl,
+                            quality = "SD (480p/360p)",
+                            sizeBytes = size,
+                            formattedSize = formatSize(size),
+                            isNoWatermark = false,
+                            isAudioOnly = false,
+                            fileExtension = "mp4"
+                        )
+                    )
+                }
+
+                if (options.isNotEmpty()) {
+                    return VideoInfo(
+                        id = "fb_direct_${System.currentTimeMillis()}",
+                        title = rawTitle,
+                        author = "Facebook",
+                        coverUrl = "",
+                        durationSeconds = 0,
+                        platform = Platform.FACEBOOK,
+                        options = options
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
     }
 
     private fun fetchFromFSaveProxy(endpoint: String, targetUrl: String): VideoInfo? {
@@ -103,10 +186,17 @@ object FacebookScraper {
                                 val realSize = if (sizeBytes > 0) sizeBytes else fetchContentLength(downloadUrl)
                                 val finalFormattedSize = if (sizeFormatted.isNotEmpty()) sizeFormatted else formatSize(realSize)
                                 val isAudio = type.lowercase() == "audio"
+                                val isHd = qualityStr.contains("HD", ignoreCase = true) || qualityStr.contains("1080", ignoreCase = true) || qualityStr.contains("720", ignoreCase = true)
+
+                                val label = when {
+                                    isAudio -> "Audio MP3"
+                                    isHd -> "High Quality (HD)"
+                                    else -> "Low Quality (SD)"
+                                }
 
                                 options.add(
                                     DownloadOption(
-                                        label = if (isAudio) "Âm thanh MP3" else "Video Facebook ($qualityStr)",
+                                        label = label,
                                         url = downloadUrl,
                                         quality = qualityStr,
                                         sizeBytes = realSize,
@@ -139,76 +229,17 @@ object FacebookScraper {
         return null
     }
 
-    private fun fetchDirectFacebookHtml(targetUrl: String): VideoInfo? {
-        try {
-            val req = Request.Builder()
-                .url(targetUrl)
-                .header("User-Agent", "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
-                .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
-                .build()
+    private fun unescapeHtmlAndJson(str: String): String {
+        return str.replace("&quot;", "\"")
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("\\/", "/")
+            .replace("\\u0026", "&")
+    }
 
-            client.newCall(req).execute().use { response ->
-                if (!response.isSuccessful || response.body == null) return null
-                val html = response.body!!.string()
-
-                val hdMatches = findRegexMatches(html, """["']hd_src["']\s*:\s*["']([^"']+)["']|["']browser_native_hd_url["']\s*:\s*["']([^"']+)["']""")
-                val sdMatches = findRegexMatches(html, """["']sd_src["']\s*:\s*["']([^"']+)["']|["']browser_native_sd_url["']\s*:\s*["']([^"']+)["']""")
-
-                val titleMatch = findRegexMatches(html, """<title[^>]*>(.*?)</title>""")
-                val title = titleMatch.firstOrNull()?.replace(" | Facebook", "")?.trim() ?: "Facebook Video"
-
-                val options = mutableListOf<DownloadOption>()
-
-                if (hdMatches.isNotEmpty()) {
-                    val hdUrl = hdMatches.first().replace("\\/", "/")
-                    val size = fetchContentLength(hdUrl)
-                    options.add(
-                        DownloadOption(
-                            label = "Facebook HD Video",
-                            url = hdUrl,
-                            quality = "HD (1080p)",
-                            sizeBytes = size,
-                            formattedSize = formatSize(size),
-                            isNoWatermark = false,
-                            isAudioOnly = false,
-                            fileExtension = "mp4"
-                        )
-                    )
-                }
-
-                if (sdMatches.isNotEmpty()) {
-                    val sdUrl = sdMatches.first().replace("\\/", "/")
-                    val size = fetchContentLength(sdUrl)
-                    options.add(
-                        DownloadOption(
-                            label = "Facebook SD Video",
-                            url = sdUrl,
-                            quality = "SD (480p)",
-                            sizeBytes = size,
-                            formattedSize = formatSize(size),
-                            isNoWatermark = false,
-                            isAudioOnly = false,
-                            fileExtension = "mp4"
-                        )
-                    )
-                }
-
-                if (options.isNotEmpty()) {
-                    return VideoInfo(
-                        id = "fb_direct_${System.currentTimeMillis()}",
-                        title = title,
-                        author = "Facebook",
-                        coverUrl = "",
-                        durationSeconds = 0,
-                        platform = Platform.FACEBOOK,
-                        options = options
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return null
+    private fun cleanVideoUrl(url: String): String {
+        return unescapeHtmlAndJson(url).trim()
     }
 
     private fun findRegexMatches(text: String, patternStr: String): List<String> {
@@ -226,8 +257,6 @@ object FacebookScraper {
         }
         return list
     }
-
-    private fun String?.isNull_or_empty(): Boolean = this == null || this.trim().isEmpty()
 
     private fun fetchContentLength(url: String): Long {
         try {
@@ -247,7 +276,7 @@ object FacebookScraper {
     }
 
     private fun formatSize(bytes: Long): String {
-        if (bytes <= 0) return "Kích thước N/A"
+        if (bytes <= 0) return "N/A"
         val kb = bytes / 1024.0
         val mb = kb / 1024.0
         return if (mb >= 1.0) {

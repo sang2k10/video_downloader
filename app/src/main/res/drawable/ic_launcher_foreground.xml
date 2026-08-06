@@ -4,17 +4,18 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Clean Minimalist Download Arrow -->
     <path
-        android:fillColor="#6366F1"
-        android:pathData="M54,24 L54,62 M40,48 L54,62 L68,48"
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 L54,62 M40,48 L54,62 L68,48"
         android:strokeWidth="6"
-        android:strokeColor="#6366F1"
+        android:strokeColor="#FFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
     <path
-        android:fillColor="#10B981"
-        android:pathData="M34,74 L74,74"
+        android:fillColor="#6366F1"
+        android:pathData="M36,72 L72,72"
         android:strokeWidth="6"
-        android:strokeColor="#10B981"
+        android:strokeColor="#6366F1"
         android:strokeLineCap="round" />
 </vector>

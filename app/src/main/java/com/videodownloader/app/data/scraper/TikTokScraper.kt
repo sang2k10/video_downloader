@@ -1,6 +1,5 @@
 package com.videodownloader.app.data.scraper
 
-import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.videodownloader.app.data.config.RemoteConfigManager
 import com.videodownloader.app.data.model.DownloadOption
@@ -27,7 +26,7 @@ object TikTokScraper {
         try {
             val cleanUrl = extractUrl(url)
             if (cleanUrl.isEmpty()) {
-                return@withContext Result.failure(IllegalArgumentException("URL TikTok không hợp lệ"))
+                return@withContext Result.failure(IllegalArgumentException("Invalid TikTok URL"))
             }
 
             val config = RemoteConfigManager.getConfig().scraperConfig
@@ -42,7 +41,7 @@ object TikTokScraper {
                 }
             }
 
-            Result.failure(Exception("Không thể lấy thông tin video TikTok. Vui lòng thử lại sau!"))
+            Result.failure(Exception("Unable to fetch TikTok video. Please try again."))
         } catch (e: Exception) {
             e.printStackTrace()
             Result.failure(e)
@@ -103,9 +102,9 @@ object TikTokScraper {
                         val realSize = if (sizeBytesApi > 0) sizeBytesApi else fetchContentLength(playNoWm)
                         options.add(
                             DownloadOption(
-                                label = "Không logo (No Watermark)",
+                                label = "High Quality (No Watermark)",
                                 url = playNoWm,
-                                quality = "HD",
+                                quality = "HD No Watermark",
                                 sizeBytes = realSize,
                                 formattedSize = formatSize(realSize),
                                 isNoWatermark = true,
@@ -119,9 +118,9 @@ object TikTokScraper {
                         val realSize = fetchContentLength(playWm)
                         options.add(
                             DownloadOption(
-                                label = "Có logo (Watermark)",
+                                label = "Low Quality (Watermark)",
                                 url = playWm,
-                                quality = "SD",
+                                quality = "SD Watermark",
                                 sizeBytes = realSize,
                                 formattedSize = formatSize(realSize),
                                 isNoWatermark = false,
@@ -135,7 +134,7 @@ object TikTokScraper {
                         val musicSize = fetchContentLength(musicUrl)
                         options.add(
                             DownloadOption(
-                                label = "Nhạc MP3 (Audio)",
+                                label = "Audio MP3",
                                 url = musicUrl,
                                 quality = "Audio",
                                 sizeBytes = musicSize,
@@ -182,7 +181,7 @@ object TikTokScraper {
     }
 
     private fun formatSize(bytes: Long): String {
-        if (bytes <= 0) return "Kích thước N/A"
+        if (bytes <= 0) return "N/A"
         val kb = bytes / 1024.0
         val mb = kb / 1024.0
         return if (mb >= 1.0) {

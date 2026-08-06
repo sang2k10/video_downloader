@@ -42,7 +42,6 @@ import com.videodownloader.app.data.model.Platform
 import com.videodownloader.app.data.model.VideoInfo
 import com.videodownloader.app.data.scraper.FacebookScraper
 import com.videodownloader.app.data.scraper.TikTokScraper
-import com.videodownloader.app.data.updater.AppUpdater
 import com.videodownloader.app.ui.theme.FacebookColor
 import com.videodownloader.app.ui.theme.SecondaryAccent
 import com.videodownloader.app.ui.theme.TikTokColor
@@ -68,7 +67,6 @@ fun MainScreen(
 
     val scrollState = rememberScrollState()
 
-    // Handle initial shared URL if app opened via Share
     LaunchedEffect(initialSharedUrl) {
         if (initialSharedUrl.isNotEmpty()) {
             inputUrl = initialSharedUrl
@@ -84,13 +82,13 @@ fun MainScreen(
                             imageVector = Icons.Default.FileDownload,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(26.dp)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Tải Video Fast",
+                            text = "Video Downloader",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
+                            fontSize = 19.sp
                         )
                     }
                 },
@@ -99,7 +97,7 @@ fun MainScreen(
                         IconButton(onClick = { showUpdateDialog = true }) {
                             Icon(
                                 imageVector = Icons.Default.SystemUpdate,
-                                contentDescription = "Cập nhật",
+                                contentDescription = "Update",
                                 tint = SecondaryAccent
                             )
                         }
@@ -122,31 +120,7 @@ fun MainScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Header banner
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Tải Video TikTok & Facebook",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Không logo • Tùy chọn chất lượng HD/SD • Có kích thước MB",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
-            }
-
-            // Input URL Section
+            // Minimal Input Field
             OutlinedTextField(
                 value = inputUrl,
                 onValueChange = {
@@ -154,14 +128,14 @@ fun MainScreen(
                     if (errorMessage != null) errorMessage = null
                 },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Dán link TikTok hoặc Facebook...") },
+                placeholder = { Text("Paste TikTok or Facebook URL...") },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 trailingIcon = {
                     Row {
                         if (inputUrl.isNotEmpty()) {
                             IconButton(onClick = { inputUrl = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Xóa")
+                                Icon(Icons.Default.Clear, contentDescription = "Clear")
                             }
                         }
                         IconButton(onClick = {
@@ -171,11 +145,11 @@ fun MainScreen(
                                 val text = clipData.getItemAt(0).text?.toString() ?: ""
                                 if (text.isNotEmpty()) {
                                     inputUrl = text
-                                    Toast.makeText(context, "Đã dán link!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Pasted!", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }) {
-                            Icon(Icons.Default.ContentPaste, contentDescription = "Dán", tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.ContentPaste, contentDescription = "Paste", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 },
@@ -187,15 +161,15 @@ fun MainScreen(
                 )
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Action Process Button
+            // Action Button
             Button(
                 onClick = {
                     keyboardController?.hide()
                     val target = inputUrl.trim()
                     if (target.isEmpty()) {
-                        errorMessage = "Vui lòng nhập hoặc dán URL video!"
+                        errorMessage = "Please enter or paste a video URL"
                         return@Button
                     }
 
@@ -212,7 +186,6 @@ fun MainScreen(
                             isTikTok -> TikTokScraper.parseTikTokUrl(target)
                             isFB -> FacebookScraper.parseFacebookUrl(target)
                             else -> {
-                                // Try TikTok first then FB fallback
                                 val ttRes = TikTokScraper.parseTikTokUrl(target)
                                 if (ttRes.isSuccess) ttRes else FacebookScraper.parseFacebookUrl(target)
                             }
@@ -223,39 +196,39 @@ fun MainScreen(
                             videoInfo = result.getOrNull()
                             selectedOption = videoInfo?.options?.firstOrNull()
                         } else {
-                            errorMessage = result.exceptionOrNull()?.message ?: "Không thể lấy thông tin video. Vui lòng kiểm tra lại link!"
+                            errorMessage = result.exceptionOrNull()?.message ?: "Unable to fetch video info. Check the URL."
                         }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 enabled = !isLoading
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(22.dp),
                         color = Color.White,
                         strokeWidth = 2.5.dp
                     )
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text("Đang xử lý...")
+                    Text("Processing...")
                 } else {
                     Icon(Icons.Default.Download, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Lấy thông tin Video", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Fetch Video", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
-            // Error Message Display
+            // Error Message
             AnimatedVisibility(visible = errorMessage != null) {
                 errorMessage?.let { msg ->
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 14.dp),
+                            .padding(top = 12.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
@@ -268,7 +241,7 @@ fun MainScreen(
                 }
             }
 
-            // Video Preview & Download Options Card
+            // Video Preview & Download Options
             AnimatedVisibility(
                 visible = videoInfo != null,
                 enter = fadeIn(),
@@ -284,14 +257,13 @@ fun MainScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
 
-                            // Video Info Header
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (info.coverUrl.isNotEmpty()) {
                                     AsyncImage(
                                         model = info.coverUrl,
                                         contentDescription = "Thumbnail",
                                         modifier = Modifier
-                                            .size(72.dp)
+                                            .size(68.dp)
                                             .clip(RoundedCornerShape(8.dp)),
                                         contentScale = ContentScale.Crop
                                     )
@@ -299,7 +271,6 @@ fun MainScreen(
                                 }
 
                                 Column(modifier = Modifier.weight(1f)) {
-                                    // Platform Badge
                                     Surface(
                                         color = if (info.platform == Platform.TIKTOK) TikTokColor else FacebookColor,
                                         shape = RoundedCornerShape(6.dp)
@@ -322,27 +293,12 @@ fun MainScreen(
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
-
-                                    if (info.author.isNotEmpty()) {
-                                        Text(
-                                            text = "@${info.author}",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
-                                    }
                                 }
                             }
 
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 14.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.surfaceVariant)
 
-                            Text(
-                                text = "Chọn độ phân giải / Định dạng:",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-
-                            // Download options list
+                            // Quality selection list
                             info.options.forEach { option ->
                                 val isSelected = selectedOption == option
                                 Card(
@@ -386,13 +342,6 @@ fun MainScreen(
                                                 fontWeight = FontWeight.SemiBold,
                                                 fontSize = 14.sp
                                             )
-                                            if (option.quality.isNotEmpty()) {
-                                                Text(
-                                                    text = "Chất lượng: ${option.quality}",
-                                                    fontSize = 12.sp,
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                                )
-                                            }
                                         }
 
                                         if (option.formattedSize.isNotEmpty()) {
@@ -412,9 +361,9 @@ fun MainScreen(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
 
-                            // Big Download Now Button
+                            // Download Button
                             Button(
                                 onClick = {
                                     selectedOption?.let { opt ->
@@ -431,7 +380,7 @@ fun MainScreen(
                                 Icon(Icons.Default.Download, contentDescription = null, tint = Color.White)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Tải về máy ngay",
+                                    text = "Download",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -451,13 +400,13 @@ fun MainScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = SecondaryAccent)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Có phiên bản mới (${updateInfo.latestVersionName})")
+                        Text("New Update (${updateInfo.latestVersionName})")
                     }
                 },
                 text = {
                     Text(
                         if (updateInfo.releaseNotes.isNotEmpty()) updateInfo.releaseNotes
-                        else "Đã có bản cập nhật mới sửa lỗi chặn tải TikTok/Facebook. Bạn có muốn cập nhật ngay không?"
+                        else "A new update is available. Do you want to update now?"
                     )
                 },
                 confirmButton = {
@@ -468,12 +417,12 @@ fun MainScreen(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = SecondaryAccent)
                     ) {
-                        Text("Cập nhật ngay")
+                        Text("Update Now")
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showUpdateDialog = false }) {
-                        Text("Để sau")
+                        Text("Later")
                     }
                 }
             )
