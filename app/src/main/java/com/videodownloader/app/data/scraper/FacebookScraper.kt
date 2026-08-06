@@ -10,7 +10,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.net.URLDecoder
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 import kotlin.math.roundToInt
@@ -31,7 +30,7 @@ object FacebookScraper {
                 return@withContext Result.failure(IllegalArgumentException("Invalid Facebook URL"))
             }
 
-            // 1. Direct HTML & Regex Extraction (Fastest & Most Reliable)
+            // 1. Direct HTML & Regex Extraction with Browser Headers
             val directInfo = fetchDirectFacebookHtml(cleanUrl)
             if (directInfo != null && directInfo.options.isNotEmpty()) {
                 return@withContext Result.success(directInfo)
@@ -69,8 +68,17 @@ object FacebookScraper {
             val req = Request.Builder()
                 .url(requestUrl)
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                .header("Accept-Language", "en-US,en;q=0.9")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+                .header("Accept-Language", "en-US,en;q=0.9,vi;q=0.8")
+                .header("Cache-Control", "max-age=0")
+                .header("Sec-Ch-Ua", "\"Not-A.Brand\";v=\"99\", \"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\"")
+                .header("Sec-Ch-Ua-Mobile", "?0")
+                .header("Sec-Ch-Ua-Platform", "\"Windows\"")
+                .header("Sec-Fetch-Dest", "document")
+                .header("Sec-Fetch-Mode", "navigate")
+                .header("Sec-Fetch-Site", "none")
+                .header("Sec-Fetch-User", "?1")
+                .header("Upgrade-Insecure-Requests", "1")
                 .build()
 
             client.newCall(req).execute().use { response ->
@@ -97,7 +105,7 @@ object FacebookScraper {
                         DownloadOption(
                             label = "High Quality (HD)",
                             url = realHdUrl,
-                            quality = "HD (1080p/720p)",
+                            quality = "HD",
                             sizeBytes = size,
                             formattedSize = formatSize(size),
                             isNoWatermark = false,
@@ -116,7 +124,7 @@ object FacebookScraper {
                         DownloadOption(
                             label = "Low Quality (SD)",
                             url = realSdUrl,
-                            quality = "SD (480p/360p)",
+                            quality = "SD",
                             sizeBytes = size,
                             formattedSize = formatSize(size),
                             isNoWatermark = false,
