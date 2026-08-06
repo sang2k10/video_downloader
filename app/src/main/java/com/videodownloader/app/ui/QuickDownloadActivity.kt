@@ -2,6 +2,7 @@ package com.videodownloader.app.ui
 
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -30,12 +31,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
 import com.videodownloader.app.data.downloader.VideoDownloader
 import com.videodownloader.app.data.model.DownloadOption
@@ -53,9 +54,6 @@ class QuickDownloadActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Enable edge-to-edge full window fit to match phone screen perfectly
-        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         var initialUrl = ""
@@ -90,55 +88,54 @@ fun ZaloStylePopupScreen(
     onClose: () -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     LaunchedEffect(Unit) {
         visible = true
     }
 
-    // Full screen edge-to-edge translucent overlay matching device orientation
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
             .clickable { onClose() },
         contentAlignment = Alignment.Center
     ) {
         AnimatedVisibility(
             visible = visible,
-            enter = scaleIn(initialScale = 0.85f) + fadeIn() + expandVertically(),
-            exit = scaleOut(targetScale = 0.85f) + fadeOut() + shrinkVertically()
+            enter = scaleIn(initialScale = 0.85f) + fadeIn(),
+            exit = scaleOut(targetScale = 0.85f) + fadeOut()
         ) {
-            // Zalo-style Pop-up Container with Top Floating Avatar Icon
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.90f)
+                    .fillMaxWidth(if (isLandscape) 0.70f else 0.90f)
                     .widthIn(max = 440.dp)
-                    .padding(vertical = 24.dp)
-                    .clickable(enabled = false) {}, // Prevent dismiss when tapping inside pop-up
+                    .padding(vertical = if (isLandscape) 8.dp else 20.dp)
+                    .clickable(enabled = false) {},
                 contentAlignment = Alignment.TopCenter
             ) {
-
-                // Main Pop-up Card Container
+                // Main Pop-up Card
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(24.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 28.dp) // Space for top floating circular avatar
+                        .padding(top = 26.dp)
                 ) {
                     ZaloPopupContent(
                         initialUrl = initialUrl,
+                        isLandscape = isLandscape,
                         onClose = onClose
                     )
                 }
 
-                // Zalo-Style Top Circular Floating Icon Avatar
+                // Top Circular Floating Icon Avatar
                 Surface(
                     modifier = Modifier
-                        .size(56.dp)
+                        .size(52.dp)
                         .shadow(8.dp, CircleShape)
-                        .border(3.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                        .border(2.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.primary
                 ) {
@@ -147,7 +144,7 @@ fun ZaloStylePopupScreen(
                             imageVector = Icons.Default.FileDownload,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }
@@ -159,6 +156,7 @@ fun ZaloStylePopupScreen(
 @Composable
 fun ZaloPopupContent(
     initialUrl: String,
+    isLandscape: Boolean,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -172,7 +170,7 @@ fun ZaloPopupContent(
 
     val scrollState = rememberScrollState()
 
-    // Auto-fetch video if URL in clipboard on open
+    // Auto-fetch if URL in clipboard on open
     LaunchedEffect(initialUrl) {
         if (initialUrl.isNotEmpty()) {
             isLoading = true
@@ -199,8 +197,8 @@ fun ZaloPopupContent(
 
     Column(
         modifier = Modifier
-            .padding(top = 34.dp, start = 18.dp, end = 18.dp, bottom = 18.dp)
-            .heightIn(max = 520.dp)
+            .padding(top = 30.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
+            .heightIn(max = if (isLandscape) 320.dp else 520.dp)
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -214,12 +212,12 @@ fun ZaloPopupContent(
             Text(
                 text = "Video Downloader",
                 fontWeight = FontWeight.Bold,
-                fontSize = 17.sp,
+                fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
             IconButton(
                 onClick = onClose,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(26.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Clear,
@@ -229,7 +227,7 @@ fun ZaloPopupContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // URL Input Box
         OutlinedTextField(
@@ -238,7 +236,7 @@ fun ZaloPopupContent(
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Paste TikTok or Facebook URL...", fontSize = 13.sp) },
             singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(12.dp),
             trailingIcon = {
                 Row {
                     if (inputUrl.isNotEmpty()) {
@@ -303,8 +301,8 @@ fun ZaloPopupContent(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp),
-            shape = RoundedCornerShape(12.dp),
+                .height(42.dp),
+            shape = RoundedCornerShape(10.dp),
             enabled = !isLoading
         ) {
             if (isLoading) {
@@ -318,7 +316,7 @@ fun ZaloPopupContent(
             }
         }
 
-        // Error Message Card
+        // Error Message
         AnimatedVisibility(visible = errorMessage != null) {
             errorMessage?.let { msg ->
                 Card(
@@ -341,14 +339,14 @@ fun ZaloPopupContent(
         // Video Result Section
         AnimatedVisibility(visible = videoInfo != null, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
             videoInfo?.let { info ->
-                Column(modifier = Modifier.padding(top = 12.dp)) {
+                Column(modifier = Modifier.padding(top = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (info.coverUrl.isNotEmpty()) {
                             AsyncImage(
                                 model = info.coverUrl,
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .size(54.dp)
+                                    .size(52.dp)
                                     .clip(RoundedCornerShape(8.dp)),
                                 contentScale = ContentScale.Crop
                             )
@@ -397,7 +395,7 @@ fun ZaloPopupContent(
                                 containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.background
                             )
                         ) {
-                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(selected = isSelected, onClick = { selectedOption = option })
                                 Icon(
                                     imageVector = if (option.isAudioOnly) Icons.Default.MusicNote else Icons.Default.Videocam,
@@ -416,7 +414,7 @@ fun ZaloPopupContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Button(
                         onClick = {
@@ -428,8 +426,8 @@ fun ZaloPopupContent(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(44.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .height(42.dp),
+                        shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = SecondaryAccent),
                         enabled = selectedOption != null
                     ) {
