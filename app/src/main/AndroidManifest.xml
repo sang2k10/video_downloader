@@ -47,11 +47,12 @@
             </intent-filter>
         </service>
 
-        <!-- Translucent Floating Pop-up Dialog Activity -->
+        <!-- Zalo-style Floating Pop-up Activity (Supports Landscape & Orientation fluidity) -->
         <activity
             android:name=".ui.QuickDownloadActivity"
             android:exported="true"
             android:theme="@style/Theme.VideoDownloader.Dialog"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboardHidden"
             android:taskAffinity=""
             android:excludeFromRecents="true"
             android:launchMode="singleInstance">
