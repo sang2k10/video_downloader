@@ -35,6 +35,28 @@
             </intent-filter>
         </activity>
 
+        <!-- Quick Settings Tile Service (Adds app icon to Samsung/Android Quick Panel) -->
+        <service
+            android:name=".service.QuickDownloadTileService"
+            android:label="@string/app_name"
+            android:icon="@drawable/ic_launcher_foreground"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Translucent Floating Pop-up Dialog Activity -->
+        <activity
+            android:name=".ui.QuickDownloadActivity"
+            android:exported="true"
+            android:theme="@style/Theme.VideoDownloader.Dialog"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance">
+        </activity>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
